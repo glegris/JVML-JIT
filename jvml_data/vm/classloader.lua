@@ -1,14 +1,339 @@
 --This will load class files and will register them--
-natives = {["java.lang.Object"]={
+
+--
+natives = {
+["java.lang.Object"]={
     ["registerNatives()V"] = function()
+        print("registerNatives")
         local path = resolvePath("java/lang/native")
         for i,v in ipairs(fs.list(path)) do
+            print("registerNatives:"..fs.combine(path, v))
             if v:sub(1,1) ~= "." then
                 dofile(fs.combine(path, v))
             end
         end
     end
-}}
+}
+}
+
+natives["java.lang.Class"] = natives["java.lang.Class"] or {}
+natives["java.lang.Class"]["getSuperclass()Ljava/lang/Class;"] = function(this)
+        local class = classByName(toLString(getObjectField(this, "name")))
+        if class == classByName("java.lang.Object") or bit.band(class.acc, CLASS_ACC.INTERFACE) > 0 then
+            return nil
+        end
+        return getJClass(class.super.name)
+end
+
+natives["java.lang.Throwable"] = natives["java.lang.Throwable"] or {}
+
+natives["java.lang.Throwable"]["fillInStackTrace()Ljava/lang/Throwable;"] = function(this)
+	local stackTrace = newArray(getArrayClass("[Ljava.lang.StackTraceElement;"), 0)
+	local lStackTrace = getStackTrace()
+	stackTrace[4] = #lStackTrace - 1
+	local StackTraceElement = classByName("java.lang.StackTraceElement")
+	for i=1,#lStackTrace-1 do
+		local v = lStackTrace[i]
+		stackTrace[5][i] = newInstance(StackTraceElement)
+		local m = findMethod(StackTraceElement, "<init>(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)V")
+		
+		local lineNumber = v.lineNumber
+		if bit.band(m.acc,METHOD_ACC.NATIVE) == METHOD_ACC.NATIVE then
+			lineNumber = -2
+		end
+		m[1](stackTrace[5][i], toJString(v.className), toJString(v.methodName), toJString(v.fileName or ""), lineNumber or -1)
+	end
+	setObjectField(this, "stackTrace", stackTrace)
+	return this
+end
+
+natives["java.lang.System"] = natives["java.lang.System"] or {}
+
+natives["java.lang.System"]["load(Ljava/lang/String;)V"] = function(jString)
+	print("System.load: ")
+    local str = toLString(jString)
+    print("System.load: "..str)
+	local path = resolvePath(str)
+    print("System.load 2: "..path)
+	dofile(path)
+end
+
+-- TODO: Reimplement this less naively
+natives["java.lang.System"]["arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V"] = function(
+	src, srcPos, dest, destPos, length)
+	for i=1,length do
+		dest[5][i + destPos] = src[5][i + srcPos]
+	end
+end
+
+natives["jvml.util.ArrayList"] = natives["jvml.util.ArrayList"] or {}
+
+natives["jvml.util.ArrayList"]["initArray()V"] = function(this)
+	-- array must be initialized natively, as generics can't be used for array construction
+	local arr = newArray(getArrayClass("[Ljava.lang.Object;"), 0)
+	setObjectField(this, "array", arr)
+end
+
+natives["jvml.util.ArrayList"]["add(Ljava/lang/Object;)Z"] = function(this, e)
+	local arr = getObjectField(this, "array")
+	arr[5][arr[4] + 1] = e
+	arr[4] = arr[4] + 1
+	return 1 -- java booleans are 1/0
+end
+
+natives["jvml.util.ArrayList"]["add(ILjava/lang/Object;)Z"] = function(this, i, e)
+	local arr = getObjectField(this, "array")
+	assert(i < arr[4] and i >= 0, "ArrayList index out of bounds")
+	table.insert(arr[5], i + 1, e)
+	arr[4] = arr[4] + 1
+	return 1
+end
+
+natives["jvml.util.ArrayList"]["clear()V"] = function(this)
+	local arr = getObjectField(this, "array")
+	arr[5] = {}
+	arr[4] = 0
+end
+
+natives["jvml.util.ArrayList"]["remove(Ljava/lang/Object;)Z"] = function(this, e)
+	local arr = getObjectField(this, "array")
+	for i=1, arr[4] do
+		if arr[5][i] == e then
+			table.remove(arr[5], i)
+			arr[4] = arr[4] - 1
+			return 1
+		end
+	end
+	return 0
+end
+
+natives["jvml.util.ArrayList"]["remove(I)Ljava/lang/Object;"] = function(this, i)
+	local arr = getObjectField(this, "array")
+	assert(i < arr[4] and i >= 0, "ArrayList index out of bounds")
+	local e = table.remove(arr[5], i + 1)
+	arr[4] = arr[4] - 1
+	return e
+end
+
+natives["cc.terminal.SystemTerminal"] = natives["cc.terminal.SystemTerminal"] or {}
+
+natives["cc.terminal.SystemTerminal"]["write(C)V"] = function(this, c)
+	io.write(string.char(c))
+end
+
+natives["cc.terminal.SystemTerminal"]["write(Ljava/lang/String;)V"] = function(this, text)
+	print(toLString(text))
+end
+
+natives["cc.terminal.SystemTerminal"]["clearLine()V"] = function(this)
+	--term.clearLine()
+end
+
+natives["cc.terminal.SystemTerminal"]["clear()V"] = function(this)
+	--term.clear();
+end
+
+natives["cc.terminal.SystemTerminal"]["getCursorX()I"] = function(this)
+	--local x, y = term.getCursorPos()
+	--return x - 1
+	return 0
+end
+
+natives["cc.terminal.SystemTerminal"]["getCursorY()I"] = function(this)
+	--local x, y = term.getCursorPos()
+	--return y - 1
+	return 0
+end
+
+natives["cc.terminal.SystemTerminal"]["setCursor(II)V"] = function(this, x, y)
+	--term.setCursorPos(x + 1, y + 1)
+end
+
+natives["cc.terminal.SystemTerminal"]["isColor()Z"] = function(this)
+	--return term.isColor() and 1 or 0
+	return 0
+end
+
+natives["cc.terminal.SystemTerminal"]["width()I"] = function(this)
+	--local w, h = term.getSize()
+	--return w
+	return 50
+end
+
+natives["cc.terminal.SystemTerminal"]["height()I"] = function(this)
+	--local w, h = term.getSize()
+	--return h
+	return 30
+end
+
+natives["cc.terminal.SystemTerminal"]["scroll(I)V"] = function(this, n)
+	--term.scroll(n)
+end
+
+natives["cc.terminal.SystemTerminal"]["setTextColor(Lcc/terminal/Color;)V"] = function(this, c)
+	--term.setTextColor(getObjectField(c, "intValue"))
+end
+
+natives["cc.terminal.SystemTerminal"]["setBackgroundColor(Lcc/terminal/Color;)V"] = function(this, c)
+	--term.setBackgroundColor(getObjectField(c, "intValue"))
+end
+
+natives["java.lang.Class"] = natives["java.lang.Class"] or {}
+natives["java.lang.Class"]["getSuperclass()Ljava/lang/Class;"] = function(this)
+	local class = classByName(toLString(getObjectField(this, "name")))
+	if class == classByName("java.lang.Object") or bit.band(class.acc, CLASS_ACC.INTERFACE) > 0 then
+		return nil
+	end
+	return getJClass(class.super.name)
+end
+
+local function findMethodName(class, name)
+	for i,v in ipairs(class.methods) do
+		if v.name:find(name, 1, true) then
+			return v.name
+		end
+	end
+	for i,v in ipairs(class.staticMethods) do
+		if v.name:find(name, 1, true) then
+			return v.name
+		end
+	end
+	-- default interface methods
+	for i,v in ipairs(class.interfaces) do
+		local iname = findMethodName(v, name)
+		if iname then
+			return iname
+		end
+	end
+end
+natives["java.lang.Class"]["getMethod(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;"] = function(this, name, params)
+	local class = classByName(toLString(getObjectField(this, "name")))
+	local paramTypes = {}
+	for i,v in ipairs(params[5]) do
+		local name = toLString(getObjectField(v, "name"))
+		if name:find("^%[") then
+			name = name:gsub("%.", "/")
+		elseif name == "boolean" then
+			name = "Z"
+		elseif name == "byte" then
+			name = "B"
+		elseif name == "char" then
+			name = "C"
+		elseif name == "double" then
+			name = "D"
+		elseif name == "float" then
+			name = "F"
+		elseif name == "int" then
+			name = "I"
+		elseif name == "long" then
+			name = "J"
+		elseif name == "short" then
+			name = "S"
+		else
+			name = "L"..name:gsub("%.", "/")..";"
+		end
+
+		paramTypes[i] = name
+	end
+
+	local noReturnName = toLString(name) .. "(" .. table.concat(paramTypes) .. ")"
+	local methodName = findMethodName(class, noReturnName)
+	assert(methodName, "Failed to find method: "..noReturnName)
+	local methodObj = newInstance(classByName("java.lang.reflect.Method"))
+	setObjectField(methodObj, "name", toJString(methodName))
+	setObjectField(methodObj, "declaringClass", getJClass(class.name))
+	return methodObj
+end
+
+local function getMethodNames(class, t)
+	if class.super then
+		getMethodNames(class.super, t)
+	end
+	for i,v in ipairs(class.methods) do
+		t[v.name] = true
+	end
+	-- default interface methods
+	for i,v in ipairs(class.interfaces) do
+		getMethodNames(v, t)
+	end
+end
+natives["java.lang.Class"]["getMethods()[Ljava/lang/reflect/Method;"] = function(this)
+	local class = classByName(toLString(getObjectField(this, "name")))
+	local t = {}
+	getMethodNames(class, t)
+	local jmethods = {}
+	for k,v in pairs(t) do
+		local m = newInstance(classByName("java.lang.reflect.Method"))
+		setObjectField(m, "name", toJString(k))
+		setObjectField(m, "declaringClass", getJClass(class.name))
+		table.insert(jmethods, m)
+	end
+	local mArray = newArray(getArrayClass("[Ljava.lang.reflect.Method;"), #jmethods)
+	mArray[5] = jmethods
+	return mArray
+end
+
+natives["java.lang.Class"]["getPrimitiveClass(Ljava/lang/String;)Ljava/lang/Class;"] = function(jstr)
+	local str = toLString(jstr)
+	local class = getJClass(str)
+	return class
+end
+
+natives["java.lang.Class"]["getInterfaces()[Ljava/lang/Class;"] = function(this)
+    local class = classByName(toLString(getObjectField(this, "name")))
+
+    local len = 0
+    if class.interfaces then len = #class.interfaces end
+    local array = newArray(getArrayClass("Ljava/lang/Class;"), len)
+    array[5] = { }
+    for i = 1, len do
+        array[5][#array[5] + 1] = getJClass(class.interfaces[i].name)
+    end
+    return array
+end
+
+natives["java.lang.Class"]["isInterface()Z"] = function(this)
+    local class = classByName(toLString(getObjectField(this, "name")))
+    return bit.band(class.acc, CLASS_ACC.INTERFACE) > 0 and 1 or 0
+end
+
+natives["java.lang.Class"]["isAssignableFrom(Ljava/lang/Class;)Z"] = function(this, cls)
+    local thisClass = classByName(toLString(getObjectField(this, "name")))
+    local otherClass = classByName(toLString(getObjectField(cls, "name")))
+    return isClassAssignableFromClass(thisClass, otherClass) and 1 or 0
+end
+
+natives["java.lang.Class"]["isInstance(Ljava/lang/Object;)Z"] = function(this, obj)
+    local class = getJClass(obj[1].name)
+    local cls = classByName(toLString(getObjectField(this, "name")))
+    local tmp = class
+    while tmp do
+        if cls.name == toLString(getObjectField(tmp, "name")) then
+            break
+        end
+        if tmp == getJClass("java.lang.Object") then tmp = nil break end
+        if tmp then break end
+        if not tmp.super then break end
+        tmp = getJClass(tmp.super.name)
+    end
+    if not tmp then return 0 else
+        return cls.name == toLString(getObjectField(tmp, "name")) and 1 or 0
+    end
+end
+
+natives["java.lang.Class"]["newInstance()Ljava/lang/Object;"] = function(this)
+    local class = classByName(toLString(getObjectField(this, "name")))
+    local obj = newInstance(class)
+    findMethod(class, "<init>()V")[1](obj)
+    return obj
+end
+
+natives["java.lang.Class"]["getAnnotation(Ljava/lang/Class;)Ljava/lang/annotation/Annotation;"] = function(this, annot)
+	local thisClass = classByName(toLString(getObjectField(this, "name")))
+	local annotClass = classByName(toLString(getObjectField(annot, "name")))
+	return findClassAnnotation(thisClass, annotClass)
+end
+
 
 function isPrimitive(value)
     return PRIMITIVE_WRAPPERS[value[1]] ~= nil

@@ -86,6 +86,7 @@ end
 function resolvePath(name)
     for sPath in string.gmatch(jcp, "[^:]+") do
         local fullPath = fs.combine(sPath, name)
+        print("resolvePath("..name..")="..fullPath)
         if fs.exists(fullPath) then
             return fullPath
         end

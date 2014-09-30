@@ -1,11 +1,30 @@
-local jcd = shell.resolve("/"..fs.combine(fs.getDir(shell.getRunningProgram()), ".."))
+shell = require("shell")
+bit = require("bit")
 
+function printError(error) 
+    print(error)
+end
+
+local function loadAPI(path)
+    package.path = package.path..";"..path
+    print("package.path="..package.path)
+end
+
+natives = {} 
+
+
+
+local jcd = shell.resolve("/"..fs.combine(fs.getDir(shell.getRunningProgram()), ".."))
+print("jcd="..jcd)
 local libDir = fs.combine(jcd, "lib")
+print("libDir="..libDir)
 for i,v in ipairs(fs.list(libDir)) do
     if not v:find("^%.") and not _G[v] then
-        os.loadAPI(fs.combine(libDir, v))
+        --loadAPI(fs.combine(libDir, v))
     end
 end
+
+argparse = require("argparse")
 
 ---------------------------------------------------------------------------------------------------------------
 -- Parse arguments
@@ -47,7 +66,7 @@ end
 local vm = setmetatable({
     jcd = jcd,
     jcp = table.concat(options.classpath, ":"),
-}, {__index=getfenv()})
+}, {__index=getfenv(0)})
 
 local outputFile
 if options.output then

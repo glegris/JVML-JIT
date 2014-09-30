@@ -1,3 +1,5 @@
+shell = require("shell")
+
 local args = {...}
 local jcd = shell.resolve(fs.combine(fs.getDir(shell.getRunningProgram()), ".."))
 local program = fs.combine(jcd, "bin/jvml")
