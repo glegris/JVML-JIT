@@ -23,6 +23,12 @@ for i,v in ipairs(fs.list(libDir)) do
         --loadAPI(fs.combine(libDir, v))
     end
 end
+local grinLibDir = fs.combine(jcd, "grin/lib")
+for i,v in ipairs(fs.list(grinLibDir)) do
+    if not v:find("^%.") and not _G[v] then
+        os.loadAPI(fs.combine(grinLibDir, v))
+    end
+end
 
 argparse = require("argparse")
 
@@ -50,8 +56,10 @@ parser
 parser
     :argument"javaArgs"
     :count"*"
+parser
+    :switch"jar"
 parser:usage"Usage: jvml [args, ...] <main class> [java args, ...]"
-local options = parser:parse({classpath={"/" .. fs.combine(jcd, "CCLib/build/classes"), "."},javaArgs={}}, ...)
+local options = parser:parse({classpath={"/" .. fs.combine(jcd, "CCLib/build/jar/cc_rt.jar"), "."},javaArgs={}}, ...)
 if not options then
     return
 end
@@ -60,8 +68,11 @@ end
 ---------------------------------------------------------------------------------------------------------------
 -- Load the VM
 ---------------------------------------------------------------------------------------------------------------
+if options.jar then
+    table.insert(options.classpath, options.mainclass)
+end
 for i,v in ipairs(options.classpath) do
-    options.classpath[i] = shell.resolve(v)
+    options.classpath[i] = "/"..shell.resolve(v)
 end
 local vm = setmetatable({
     jcd = jcd,
@@ -119,6 +130,7 @@ end
 
 dofile(fs.combine(vm.jcd, "bigint/bigint.lua"))
 dofile(fs.combine(vm.jcd, "jvml_data/vm/classpath.lua"))
+dofile(fs.combine(vm.jcd, "jvml_data/vm/runtime.lua"))
 dofile(fs.combine(vm.jcd, "jvml_data/vm/jit.lua"))
 dofile(fs.combine(vm.jcd, "jvml_data/vm/classloader.lua"))
 dofile(fs.combine(vm.jcd, "jvml_data/vm/arrays.lua"))
@@ -138,7 +150,24 @@ if not options.g then
     for i,v in ipairs(options.javaArgs) do
         jArray[5][i] = vm.toJString(v)
     end
-    local m = vm.findMethod(vm.classByName(options.mainclass), "main([Ljava/lang/String;)V")[1]
+
+    local mainclass
+    if options.jar then
+        local jarFs = zip.open(fs.open(shell.resolve(options.mainclass), "rb"))
+        assert(jarFs.exists("META-INF/MANIFEST.MF") and not jarFs.isDir("META-INF/MANIFEST.MF"), "No manifest found")
+        local man = jarFs.open("META-INF/MANIFEST.MF", "r")
+        for l in man.readLine do
+            local _, _, name = l:find("^Main%-Class: (%S+)")
+            if name then
+                mainclass = vm.classByName(name)
+                break
+            end
+        end
+    else
+        mainclass = vm.classByName(options.mainclass)
+    end
+    assert(mainclass, "Main class not found")
+    local m = vm.findMethod(mainclass, "main([Ljava/lang/String;)V")[1]
 
     -- Begin
     local startTime

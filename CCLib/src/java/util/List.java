@@ -8,7 +8,30 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
+<<<<<<< HEAD
 package java.util;
+=======
+		@Override
+		public T next() {
+			return list.get(++i);
+		}
+
+		@Override
+		public void remove() {
+			list.remove(i--);
+		}
+    }
+
+    public class LIterator<U> extends UtilityIterator<U> implements ListIterator<U> {
+    	public LIterator(List<U> l) {
+    		super(l);
+    	}
+
+    	public LIterator(List<U> l, int index) {
+    		super(l);
+    		i = index - 1;
+    	}
+>>>>>>> upstream/master
 
 public interface List<T> extends Collection<T> {
   public T get(int index);

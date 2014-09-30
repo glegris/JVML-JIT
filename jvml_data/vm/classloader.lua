@@ -9,7 +9,7 @@ natives = {
         for i,v in ipairs(fs.list(path)) do
             print("registerNatives:"..fs.combine(path, v))
             if v:sub(1,1) ~= "." then
-                dofile(fs.combine(path, v))
+                classpath.dofile(fs.combine(path, v))
             end
         end
     end
