@@ -43,6 +43,10 @@ public class String implements Comparable<String>, CharSequence {
         this(data, 0, data.length);
     }
 
+    public String(String s) {
+        this(s.toCharArray());
+    }
+
     /**
      * Creates a {@code String} from the contents of the specified {@code
      * StringBuffer}.
@@ -479,12 +483,12 @@ public class String implements Comparable<String>, CharSequence {
     public static String valueOf(char[] data) {
         return valueOf(data, 0, data.length);
     }
-    
+
     /**
      * Creates a new string containing the characters in the specified character
      * array. Modifying the character array after creating the string has no
      * effect on the string.
-     *
+     * 
      * @param data
      *            the array of characters.
      * @return the new string.
@@ -499,7 +503,7 @@ public class String implements Comparable<String>, CharSequence {
      * Creates a new string containing the specified characters in the character
      * array. Modifying the character array after creating the string has no
      * effect on the string.
-     *
+     * 
      * @param data
      *            the array of characters.
      * @param start

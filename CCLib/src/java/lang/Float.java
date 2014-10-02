@@ -2,112 +2,123 @@ package java.lang;
 
 public class Float extends Number {
 
-	private static final int EXP_BIT_MASK = 0x7F800000;
-	private static final int SIGNIF_BIT_MASK = 0x007FFFFF;
+    private static final int EXP_BIT_MASK = 0x7F800000;
+    private static final int SIGNIF_BIT_MASK = 0x007FFFFF;
 
-	public static final float NEGATIVE_INFINITY = -1.0f / 0.0f;
-	public static final float POSITIVE_INFINITY = 1.0f / 0.0f;
-	public static final float NaN = 0.0f / 0.0f;
+    public static final float NEGATIVE_INFINITY = -1.0f / 0.0f;
+    public static final float POSITIVE_INFINITY = 1.0f / 0.0f;
+    public static final float NaN = 0.0f / 0.0f;
 
-	private final float value;
-	public static final Class<Float> TYPE = (Class<Float>) Class.getPrimitiveClass("float");
+    public static final int MAX_EXPONENT = 127;
+    public static final float MAX_VALUE = 3.4028234663852886E38f;
+    public static final int MIN_EXPONENT = -126;
+    public static final float MIN_NORMAL = 1.1754943508222875E-38f;
+    public static final float MIN_VALUE = 1.401298464324817E-45f;
+    public static final int SIZE = 32;
 
-	public static Float valueOf(float value) {
-		return new Float(value);
-	}
+    private final float value;
+    public static final Class<Float> TYPE = (Class<Float>) Class.getPrimitiveClass("float");
 
-	public Float(float value) {
-		this.value = value;
-	}
+    public static Float valueOf(float value) {
+        return new Float(value);
+    }
 
-	public String toString() {
-		return toString(value);
-	}
+    public Float(float value) {
+        this.value = value;
+    }
+    
+    public Float(double value) {
+        this.value = (float)value;
+    }
 
-	public float floatValue() {
-		return value;
-	}
+    public String toString() {
+        return toString(value);
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (obj instanceof Float) {
-			return value == ((Float) obj).floatValue();
-		}
-		return false;
-	}
+    public float floatValue() {
+        return value;
+    }
 
-	public Float(String value) {
-		this.value = parseFloat(value);
-	}
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof Float) {
+            return value == ((Float) obj).floatValue();
+        }
+        return false;
+    }
 
-	public static Float valueOf(String s) {
-		return new Float(s);
-	}
+    public Float(String value) {
+        this.value = parseFloat(value);
+    }
 
-	public int hashCode() {
-		return floatToRawIntBits(value);
-	}
+    public static Float valueOf(String s) {
+        return new Float(s);
+    }
 
-	public static String toString(float v) {
-		return Double.toString(v);
-	}
+    public int hashCode() {
+        return floatToRawIntBits(value);
+    }
 
-	public byte byteValue() {
-		return (byte) value;
-	}
+    public static String toString(float v) {
+        return Double.toString(v);
+    }
 
-	public short shortValue() {
-		return (short) value;
-	}
+    public byte byteValue() {
+        return (byte) value;
+    }
 
-	public int intValue() {
-		return (int) value;
-	}
+    public short shortValue() {
+        return (short) value;
+    }
 
-	public long longValue() {
-		return (long) value;
-	}
+    public int intValue() {
+        return (int) value;
+    }
 
-	public double doubleValue() {
-		return (double) value;
-	}
+    public long longValue() {
+        return (long) value;
+    }
 
-	public boolean isInfinite() {
-		return isInfinite(value);
-	}
+    public double doubleValue() {
+        return (double) value;
+    }
 
-	public boolean isNaN() {
-		return isNaN(value);
-	}
+    public boolean isInfinite() {
+        return isInfinite(value);
+    }
 
-	public static float parseFloat(String s) {
-		int[] numRead = new int[1];
-		float f = floatFromString(s, numRead);
-		if (numRead[0] == 1) {
-			return f;
-		} else {
-			throw new NumberFormatException(s);
-		}
-	}
+    public boolean isNaN() {
+        return isNaN(value);
+    }
 
-	public static int floatToIntBits(float value) {
-		int result = floatToRawIntBits(value);
+    public static float parseFloat(String s) {
+        int[] numRead = new int[1];
+        float f = floatFromString(s, numRead);
+        if (numRead[0] == 1) {
+            return f;
+        } else {
+            throw new NumberFormatException(s);
+        }
+    }
 
-		// Check for NaN based on values of bit fields, maximum
-		// exponent and nonzero significand.
-		if (((result & EXP_BIT_MASK) == EXP_BIT_MASK) && (result & SIGNIF_BIT_MASK) != 0) {
-			result = 0x7fc00000;
-		}
-		return result;
-	}
+    public static int floatToIntBits(float value) {
+        int result = floatToRawIntBits(value);
 
-	public static native int floatToRawIntBits(float value);
+        // Check for NaN based on values of bit fields, maximum
+        // exponent and nonzero significand.
+        if (((result & EXP_BIT_MASK) == EXP_BIT_MASK) && (result & SIGNIF_BIT_MASK) != 0) {
+            result = 0x7fc00000;
+        }
+        return result;
+    }
 
-	public static native float intBitsToFloat(int bits);
+    public static native int floatToRawIntBits(float value);
 
-	public static native boolean isInfinite(float value);
+    public static native float intBitsToFloat(int bits);
 
-	public static native boolean isNaN(float value);
+    public static native boolean isInfinite(float value);
 
-	public static native float floatFromString(String s, int[] numRead);
+    public static native boolean isNaN(float value);
+
+    public static native float floatFromString(String s, int[] numRead);
 }
