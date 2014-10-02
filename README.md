@@ -1,16 +1,19 @@
-JVML
-====
-
-A continuation of JVML which JITs Java bytecode to Lua bytecode rather than interpreting. Original codebase by ds84182.
+#LuaJVM
 
 
-Requirements
-====
+A continuation of JVML which JITs Java bytecode to Lua bytecode rather than interpreting.
 
-Ant is required to build the runtime library for JVML (cc_rt.jar)
+Original code: [JVML](https://github.com/ds84182/JVML), [JVML-JIT](https://github.com/Yevano/JVML-JIT )
 
-To compile a java source file and ensure proper checking against the CCLib runtime, instead of the one shipped with the jdk, use the bootclasspath option
+##Howto
+### Compile Java code
 
-```
-javac -bootclasspath CCLib/build/jar/cc_rt.jar MyFirstProgram.java
-```
+    cd CCLib
+    ant
+    cd ../tests
+    ant
+
+### Start the JVM
+
+    cd bin
+    lua jvml -cp ../tests/build SimpleTest
